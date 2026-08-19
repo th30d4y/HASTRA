@@ -49,6 +49,7 @@ function ReplayResult({ result }: { result: any }) {
   const [expanded, setExpanded] = useState<number | null>(null)
   const passed = result.passed_steps ?? 0
   const failed = result.failed_steps ?? 0
+  const skipped = result.skipped_steps ?? 0
   const total = result.total_steps ?? 0
   const ok = result.status === "passed"
 
@@ -56,11 +57,15 @@ function ReplayResult({ result }: { result: any }) {
     <div className="border border-white/5 rounded-xl overflow-hidden">
       <div className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 ${ok ? "bg-green-500/10" : "bg-red-500/10"}`}>
         {ok ? <Check className="w-4 h-4 text-green-400" /> : <X className="w-4 h-4 text-red-400" />}
-        <span className={`font-semibold text-sm ${ok ? "text-green-300" : "text-red-300"}`}>
-          Replay {ok ? "PASSED" : "FAILED"}
-        </span>
-        <span className="text-xs text-gray-400 ml-auto">{passed}/{total} steps passed</span>
-        {result.duration_ms && <span className="text-xs text-gray-600">{result.duration_ms}ms</span>}
+        <div>
+          <span className={`font-semibold text-sm ${ok ? "text-green-300" : "text-red-300"}`}>
+            Replay {ok ? "PASSED" : "FAILED"}
+          </span>
+          <span className="text-xs text-gray-400 ml-2">
+            {passed} passed · {failed} failed{skipped > 0 ? ` · ${skipped} skipped` : ""} of {total}
+          </span>
+        </div>
+        {result.duration_ms && <span className="text-xs text-gray-600 ml-auto">{result.duration_ms}ms</span>}
       </div>
 
       <div className="p-4 space-y-2">
@@ -201,8 +206,8 @@ function RecordingSession({ recording, onBack }: { recording: any; onBack: () =>
 
   useEffect(() => {
     if (isRecording) {
-      pollRef.current = setInterval(pollEvents, 1000)
-      screenshotRef.current = setInterval(pollScreenshot, 800)
+      pollRef.current = setInterval(pollEvents, 2000)     // poll events every 2s
+      screenshotRef.current = setInterval(pollScreenshot, 2500)  // screenshot every 2.5s
       pollScreenshot() // immediate first shot
     } else {
       // Load saved events from DB
@@ -379,8 +384,22 @@ function RecordingSession({ recording, onBack }: { recording: any; onBack: () =>
                   ) : (
                     <>
                       <Globe className="w-10 h-10 text-gray-700 mb-3" />
-                      <p className="text-sm text-gray-500">No screenshot available</p>
-                      {status === "ready" && <p className="text-xs text-gray-600 mt-1">Click "Launch Browser" to start</p>}
+                      {status === "completed" ? (
+                        <div className="text-center">
+                          <p className="text-sm text-gray-400 font-medium">{recording.target_url || "Recording completed"}</p>
+                          <p className="text-xs text-gray-600 mt-1">{events.length} events recorded — use Replay to execute in a fresh browser</p>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-500">No live browser session</p>
+                          {status === "ready" && recording.target_url && (
+                            <p className="text-xs text-gray-600 mt-1">Click "Launch Browser" to open {recording.target_url}</p>
+                          )}
+                          {status === "ready" && !recording.target_url && (
+                            <p className="text-xs text-gray-600 mt-1">No target URL — use manual step recording</p>
+                          )}
+                        </>
+                      )}
                     </>
                   )}
                 </div>

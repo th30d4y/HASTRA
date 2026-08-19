@@ -49,7 +49,7 @@ export default function ToolsPage() {
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Risk Level</label>
-              <select value={form.risk_level} onChange={e => setForm(f => ({...f, risk_level: e.target.value}))} className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-sm">
+              <select value={form.risk_level} onChange={e => setForm(f => ({...f, risk_level: e.target.value}))} className="w-full bg-[#111] border border-white/10 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none" style={{ colorScheme: "dark" }}>
                 {RISK_LEVELS.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>

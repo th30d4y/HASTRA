@@ -59,12 +59,17 @@ async def register(req: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(req: LoginRequest, db: Session = Depends(get_db)):
+    from app.services.audit import log_audit, LOGIN_SUCCESS, LOGIN_FAILURE
     user = db.query(User).filter(User.email == req.email).first()
     if not user or not verify_password(req.password, user.hashed_password):
+        if user:
+            log_audit(db, LOGIN_FAILURE, user.id, "user", user.id, status="failure",
+                      metadata={"email": req.email, "reason": "invalid_password"})
         raise HTTPException(status_code=401, detail="Invalid credentials")
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account disabled")
     token = create_access_token({"sub": str(user.id)})
+    log_audit(db, LOGIN_SUCCESS, user.id, "user", user.id, metadata={"email": user.email})
     return {"access_token": token, "user": {"id": user.id, "email": user.email, "full_name": user.full_name, "role": user.role}}
 
 
