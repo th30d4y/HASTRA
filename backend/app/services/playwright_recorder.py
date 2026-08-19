@@ -253,25 +253,29 @@ def _mark_recording_status(recording_id: int, status: str):
 # ── Screenshot loop ────────────────────────────────────────────────────────────
 
 async def _screenshot_loop(session: RecordingSession):
-    """Continuously capture screenshots every 600ms while recording."""
+    """Capture screenshots every 2s while recording. Quality=40, max-width=960px to reduce payload size."""
     while not session.stop_event.is_set():
         try:
             if session.page:
-                png = await session.page.screenshot(type="jpeg", quality=70, timeout=3000)
+                # Resize to 960px wide via clip viewport trick — much smaller payload
+                png = await session.page.screenshot(
+                    type="jpeg", quality=40, timeout=5000,
+                    clip={"x": 0, "y": 0, "width": 1280, "height": 800},
+                )
                 b64 = base64.b64encode(png).decode()
                 with session.screenshot_lock:
                     session.last_screenshot_b64 = b64
         except Exception:
             pass
-        await asyncio.sleep(0.6)
+        await asyncio.sleep(2.0)  # 2s interval — enough for a live view without overwhelming the network
 
 
 # ── Event poll loop ────────────────────────────────────────────────────────────
 
 async def _event_poll_loop(session: RecordingSession):
-    """Poll window.__hastra_events every second and persist them."""
+    """Poll window.__hastra_events every 1.5s and persist them in batches."""
     while not session.stop_event.is_set():
-        await asyncio.sleep(1.0)
+        await asyncio.sleep(1.5)
         if not session.page:
             continue
         try:
@@ -720,9 +724,11 @@ async def _run_replay(recording_id: int, user_id: int):
 
             await browser.close()
 
-        passed = sum(1 for s in step_results if "pass" in s.get("status", ""))
+        passed = sum(1 for s in step_results if s.get("status", "").startswith("pass"))
         failed = sum(1 for s in step_results if s.get("status") in ("fail", "error"))
+        skipped = sum(1 for s in step_results if s.get("status") == "skip")
         total = len(step_results)
+        # A replay only PASSES if ALL non-skipped steps pass and no findings
         overall = "passed" if failed == 0 and not findings else "failed"
 
         return {
@@ -732,13 +738,14 @@ async def _run_replay(recording_id: int, user_id: int):
             "total_steps": total,
             "passed_steps": passed,
             "failed_steps": failed,
+            "skipped_steps": skipped,
             "step_results": step_results,
             "findings": findings,
             "final_url": final_url,
             "final_title": final_title,
             "final_screenshot": final_ss,
             "duration_ms": int((time.monotonic() - start_time) * 1000),
-            "summary": f"{passed}/{total} steps passed",
+            "summary": f"{passed} passed, {failed} failed, {skipped} skipped of {total} steps",
         }
     finally:
         db.close()

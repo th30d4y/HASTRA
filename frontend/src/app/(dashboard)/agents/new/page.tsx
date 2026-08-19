@@ -56,14 +56,14 @@ export default function NewAgentPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">Provider</label>
-            <select value={selectedProvider || ""} onChange={e => { const v = Number(e.target.value); setSelectedProvider(v || null); setForm(f => ({...f, provider_id: v || null, model_id: ""})) }} className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50">
+            <select value={selectedProvider || ""} onChange={e => { const v = Number(e.target.value); setSelectedProvider(v || null); setForm(f => ({...f, provider_id: v || null, model_id: ""})) }} className="w-full bg-[#111] border border-white/10 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none" style={{ colorScheme: "dark" }}>
               <option value="">Select provider</option>
               {providers.map((p: any) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1.5">API Key</label>
-            <select value={form.api_key_id || ""} onChange={e => setForm(f => ({...f, api_key_id: Number(e.target.value) || null}))} className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50">
+            <select value={form.api_key_id || ""} onChange={e => setForm(f => ({...f, api_key_id: Number(e.target.value) || null}))} className="w-full bg-[#111] border border-white/10 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none" style={{ colorScheme: "dark" }}>
               <option value="">Select key</option>
               {providerKeys.map((k: any) => <option key={k.id} value={k.id}>{k.name} ({k.key_hint})</option>)}
             </select>
@@ -71,7 +71,7 @@ export default function NewAgentPage() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1.5">Model</label>
-          <select value={form.model_id} onChange={e => setForm(f => ({...f, model_id: e.target.value}))} className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50">
+          <select value={form.model_id} onChange={e => setForm(f => ({...f, model_id: e.target.value}))} className="w-full bg-[#111] border border-white/10 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none" style={{ colorScheme: "dark" }}>
             <option value="">Select model</option>
             {(models as any[]).map((m: any) => <option key={m.id} value={m.id}>{m.name || m.id}</option>)}
           </select>
@@ -88,7 +88,7 @@ export default function NewAgentPage() {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-1.5">Environment</label>
-          <select value={form.environment} onChange={e => setForm(f => ({...f, environment: e.target.value}))} className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50">
+          <select value={form.environment} onChange={e => setForm(f => ({...f, environment: e.target.value}))} className="w-full bg-[#111] border border-white/10 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none" style={{ colorScheme: "dark" }}>
             <option value="sandbox">Sandbox (Safe — Mock all tools)</option>
             <option value="staging">Staging (Caution — Semi-live)</option>
             <option value="production">Production (Danger — Live tools)</option>

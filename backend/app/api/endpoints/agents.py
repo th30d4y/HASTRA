@@ -7,7 +7,33 @@ from app.core.dependencies import get_current_user
 from app.models.user import User
 from app.models.agent import Agent, AgentVersion
 
+import re
+
 router = APIRouter()
+
+_TOOL_NAME_RE = re.compile(r'^[a-zA-Z0-9_-]{1,128}$')
+
+
+def _normalize_tool_name(name: str) -> str:
+    """
+    Normalize a tool name to be valid for Bedrock/Anthropic.
+    Pattern: ^[a-zA-Z0-9_-]{1,128}$
+    Converts spaces/special chars to underscores, strips leading digits.
+    Returns empty string if the result is still invalid.
+    """
+    if not name:
+        return ""
+    # Replace spaces and invalid chars with underscore
+    normalized = re.sub(r'[^a-zA-Z0-9_-]', '_', name.strip())
+    # Collapse multiple underscores
+    normalized = re.sub(r'_+', '_', normalized).strip('_')
+    # Strip leading digits
+    normalized = re.sub(r'^[0-9]+', '', normalized)
+    # Truncate to 128
+    normalized = normalized[:128]
+    if not normalized or not _TOOL_NAME_RE.match(normalized):
+        return ""
+    return normalized
 
 
 class AgentCreate(BaseModel):
@@ -79,6 +105,7 @@ async def list_agents(db: Session = Depends(get_db), current_user: User = Depend
 @router.post("")
 async def create_agent(req: AgentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     from app.core.config import settings
+    from app.services.audit import log_audit, AGENT_CREATED
     agent = Agent(
         user_id=current_user.id,
         model_id=req.model_id or settings.BEDROCK_MODEL_ID,
@@ -91,6 +118,8 @@ async def create_agent(req: AgentCreate, db: Session = Depends(get_db), current_
     db.add(version)
     db.commit()
     db.refresh(agent)
+    log_audit(db, AGENT_CREATED, current_user.id, "agent", agent.id,
+              metadata={"name": agent.name, "model_id": agent.model_id})
     return _agent_dict(agent)
 
 
@@ -121,11 +150,14 @@ async def update_agent(agent_id: int, req: AgentUpdate, db: Session = Depends(ge
 
 @router.delete("/{agent_id}")
 async def delete_agent(agent_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from app.services.audit import log_audit, AGENT_DELETED
     agent = db.query(Agent).filter(Agent.id == agent_id, Agent.user_id == current_user.id).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
+    name = agent.name
     db.delete(agent)
     db.commit()
+    log_audit(db, AGENT_DELETED, current_user.id, "agent", agent_id, metadata={"name": name})
     return {"status": "deleted"}
 
 
@@ -152,11 +184,18 @@ async def agent_chat(agent_id: int, req: AgentChatRequest, db: Session = Depends
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
 
-    # Build Bedrock tools from agent's configured tools
+    # Build Bedrock tools — normalize names to match pattern ^[a-zA-Z0-9_-]{1,128}$
     bedrock_tools = []
     for t in agent.tools:
+        safe_name = _normalize_tool_name(t.name)
+        if not safe_name:
+            continue  # skip tools with completely invalid names
         schema = t.input_schema or {"type": "object", "properties": {}}
-        bedrock_tools.append({"name": t.name, "description": t.description or t.name, "input_schema": schema})
+        bedrock_tools.append({
+            "name": safe_name,
+            "description": t.description or safe_name,
+            "input_schema": schema,
+        })
 
     model_id = agent.model_id if (agent.model_id and agent.model_id != "demo-mode") else settings.BEDROCK_MODEL_ID
 

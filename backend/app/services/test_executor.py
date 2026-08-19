@@ -24,14 +24,30 @@ def _bedrock_client():
     )
 
 
+import re as _re
+_TOOL_NAME_RE = _re.compile(r'^[a-zA-Z0-9_-]{1,128}$')
+
+
+def _normalize_tool_name(name: str) -> str:
+    if not name:
+        return ""
+    n = _re.sub(r'[^a-zA-Z0-9_-]', '_', name.strip())
+    n = _re.sub(r'_+', '_', n).strip('_')
+    n = _re.sub(r'^[0-9]+', '', n)[:128]
+    return n if n and _TOOL_NAME_RE.match(n) else ""
+
+
 def _build_tools_for_bedrock(tools: list) -> list:
-    """Convert HASTRA tool objects to Bedrock tool definitions."""
+    """Convert HASTRA tool objects to Bedrock tool definitions. Normalizes names."""
     result = []
     for t in tools:
+        safe = _normalize_tool_name(t.name)
+        if not safe:
+            continue
         schema = t.input_schema or {"type": "object", "properties": {}}
         result.append({
-            "name": t.name,
-            "description": t.description or t.name,
+            "name": safe,
+            "description": t.description or safe,
             "input_schema": schema,
         })
     return result

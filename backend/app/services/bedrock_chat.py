@@ -25,18 +25,37 @@ from app.core.config import settings
 
 # ── System prompt ──────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are HASTRA — an AI Agent QA and Security Testing platform.
+SYSTEM_PROMPT = """You are HASTRA, an AI Agent QA and Security Testing platform controller.
 
-You are an **agentic controller**. When the user asks you to do something, you DO IT using your tools. You do not just describe what you would do.
+CORE RULE: When the user gives an instruction, execute it immediately using your tools. Do NOT:
+- Give canned greetings ("Hey! 👋 I'm HASTRA...")
+- Ask clarifying questions you can answer from context
+- Explain what you could do instead of doing it
+- Claim success before tools confirm it
 
-## Browser agent rules
-When asked to check a website, test a login flow, or read content from a URL:
-1. Use `browser_open` to navigate to the URL.
-2. Use `browser_read_page` to observe the current state.
-3. Use `browser_click`, `browser_fill`, `browser_press` to interact.
-4. Repeat observe → act until the task is complete.
-5. Use `browser_close` when done to finalize.
-6. The `session_id` must be the SAME string across all browser tool calls in one task. Use a short unique ID like "s1", "s2", etc.
+EXECUTION RULES:
+1. "check X" / "test X" / "open X" = USE browser tools immediately
+2. "create agent" / "list agents" = USE platform tools immediately
+3. "run tests" / "generate scenarios" = USE test tools immediately
+4. Every response must be grounded in actual tool output
+5. If a tool fails, report the real error — never fake success
+
+BROWSER RULES:
+- browser_open → browser_read_page → browser_click/fill/press → repeat → browser_close
+- Use the SAME session_id (e.g. "b1") for all browser calls in one task
+- After every navigation, call browser_read_page to observe what changed
+- Report only what the page actually contains — never invent content
+- If you cannot access a site, say "Site unreachable: <reason>"
+
+AGENT CREATION RULES:
+- Create tools FIRST (get tool IDs), then create_agent with tool_ids list
+- Confirm only after tool response confirms success with real ID
+- If a field is missing, ask for only the missing field
+
+RESPONSE STYLE:
+- Concise. No filler words or emoji headers.
+- Show real results: IDs, URLs, titles, counts
+- Errors: show the actual error message from the tool
 
 ## NEVER do fake work
 - If a browser tool returns an error, report it honestly.
@@ -267,6 +286,20 @@ TOOLS = [
         "input_schema": {"type": "object", "properties": {}},
     },
     {
+        "name": "list_mcp_servers",
+        "description": "List all configured MCP servers — Playwright, Browser, Burp Suite, Filesystem, Gmail, Notion, SSH, Firecrawl, Ghidra",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_mcp_server",
+        "description": "Get details of a specific MCP server including available tools",
+        "input_schema": {
+            "type": "object",
+            "properties": {"server_id": {"type": "integer"}},
+            "required": ["server_id"],
+        },
+    },
+    {
         "name": "suggest_regression_tests",
         "description": "Analyze past failures and create regression test scenarios",
         "input_schema": {
@@ -479,6 +512,35 @@ def _dispatch(name: str, inp: dict, user_id: int, db: Session) -> dict:
         from app.models.recording import Recording
         recs = db.query(Recording).filter(Recording.user_id == user_id).order_by(Recording.created_at.desc()).limit(10).all()
         return [{"id": r.id, "name": r.name, "status": r.status, "event_count": r.event_count} for r in recs]
+
+    elif name == "list_mcp_servers":
+        from app.models.mcp_server import McpServer
+        servers = db.query(McpServer).filter(McpServer.user_id == user_id).all()
+        return [{
+            "id": s.id, "name": s.name, "description": s.description,
+            "transport": s.transport, "endpoint": s.endpoint,
+            "is_connected": s.is_connected,
+            "available_tools": s.available_tools or [],
+        } for s in servers]
+
+    elif name == "get_mcp_server":
+        from app.models.mcp_server import McpServer
+        server = db.query(McpServer).filter(McpServer.id == inp["server_id"], McpServer.user_id == user_id).first()
+        if not server:
+            return {"error": f"MCP server {inp['server_id']} not found"}
+        import json as _json
+        extra = {}
+        try:
+            extra = _json.loads(server.auth_config) if server.auth_config else {}
+        except Exception:
+            pass
+        return {
+            "id": server.id, "name": server.name, "description": server.description,
+            "transport": server.transport, "endpoint": server.endpoint,
+            "is_connected": server.is_connected,
+            "available_tools": server.available_tools or [],
+            "config": {k: v for k, v in extra.items() if k not in ("password", "token", "key")},
+        }
 
     elif name == "suggest_regression_tests":
         from app.models.agent import Agent

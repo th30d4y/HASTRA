@@ -9,6 +9,7 @@ import {
   Terminal, Bot, Wrench, ChevronDown, ChevronUp, Zap
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { formatDate } from "@/lib/utils"
 
 interface Message {
@@ -215,8 +216,22 @@ function MessageBubble({ msg }: { msg: Message }) {
             )}
             {/* Response text */}
             {msg.content && (
-              <div className="prose prose-sm max-w-none text-gray-900 prose-headings:text-black prose-code:bg-black/5 prose-code:px-1 prose-code:rounded prose-pre:bg-gray-50 prose-pre:text-xs">
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              <div className="prose prose-sm max-w-none text-gray-900
+                prose-headings:text-black prose-headings:font-semibold
+                prose-p:text-gray-800 prose-p:leading-relaxed
+                prose-code:bg-black/8 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-[11px] prose-code:font-mono prose-code:text-gray-800
+                prose-pre:bg-gray-100 prose-pre:text-xs prose-pre:overflow-x-auto
+                prose-ul:text-gray-800 prose-ol:text-gray-800
+                prose-li:text-gray-800 prose-li:my-0.5
+                prose-a:text-violet-600 prose-a:no-underline hover:prose-a:underline
+                prose-strong:text-black prose-strong:font-semibold
+                [&>table]:w-full [&>table]:border-collapse [&>table]:text-xs [&>table]:my-2 [&>table]:overflow-x-auto [&>table]:block
+                [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs
+                [&_th]:bg-gray-100 [&_th]:px-3 [&_th]:py-1.5 [&_th]:text-left [&_th]:font-semibold [&_th]:text-gray-700 [&_th]:border [&_th]:border-gray-200
+                [&_td]:px-3 [&_td]:py-1.5 [&_td]:border [&_td]:border-gray-100 [&_td]:text-gray-700 [&_td]:align-top
+                [&_tr:nth-child(even)_td]:bg-gray-50/50
+                [&_tr:hover_td]:bg-violet-50/30">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
               </div>
             )}
           </>
@@ -397,19 +412,13 @@ export default function ChatPage() {
                   I can browse websites, test login flows, create agents, run test suites, and analyze results.
                   I execute real actions — not simulations.
                 </p>
-                <div className="grid grid-cols-1 gap-1.5 mt-6 text-left">
-                  {[
-                    "Check the login flow at https://example.com",
-                    "Create a QA agent with Playwright browser tools",
-                    "Run all test scenarios for my agent",
-                    "Show me what's on https://httpbin.org",
-                  ].map((s, i) => (
-                    <button key={i} onClick={() => send(s)}
-                      className="flex items-center gap-2.5 px-3 py-2.5 border border-black/8 rounded-xl text-left text-sm text-gray-600 hover:border-black/20 hover:bg-black/[0.02] transition-colors">
-                      <MessageSquare className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                      {s}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-1 gap-1.5 mt-6 text-left text-xs text-gray-500 border border-black/5 rounded-xl p-4">
+                  <p className="font-medium text-gray-400 mb-1">What I can do:</p>
+                  <p>• Browse any URL and inspect the page</p>
+                  <p>• Test login flows and form interactions</p>
+                  <p>• Create agents, attach tools, run test suites</p>
+                  <p>• Generate security and reliability scenarios</p>
+                  <p>• Read and summarize website content</p>
                 </div>
               </div>
             )}

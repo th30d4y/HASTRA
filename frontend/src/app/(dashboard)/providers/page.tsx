@@ -48,7 +48,7 @@ export default function ProvidersPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-gray-400 mb-1">Provider</label>
-                <select value={form.provider_id} onChange={e => setForm(f => ({...f, provider_id: e.target.value}))} className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-sm">
+                <select value={form.provider_id} onChange={e => setForm(f => ({...f, provider_id: e.target.value}))} className="w-full bg-[#111] border border-white/10 text-white rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50 appearance-none" style={{ colorScheme: "dark" }}>
                   <option value="">Select provider</option>
                   {providers.map((p: any) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
                 </select>
