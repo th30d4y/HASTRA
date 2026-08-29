@@ -78,7 +78,7 @@ MCP_SERVERS = [
         "description": "Web scraping and crawling — scrape pages, crawl sites, extract structured data",
         "transport": "stdio",
         "endpoint": "npx -y firecrawl-mcp",
-        "extra_config": json.dumps({"command": ["npx", "-y", "firecrawl-mcp"], "type": "local", "env": {"FIRECRAWL_API_KEY": "fc-41de553e105b4d6ca3d396569ca90cc1"}}),
+        "extra_config": json.dumps({"command": ["npx", "-y", "firecrawl-mcp"], "type": "local", "env": {"FIRECRAWL_API_KEY": "fc-Enter-your-key"}}),
         "available_tools": ["firecrawl_scrape", "firecrawl_crawl", "firecrawl_search", "firecrawl_extract"],
         "is_connected": True,
     },
